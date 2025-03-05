@@ -247,7 +247,53 @@ namespace Sprint2.Services
         /// </remarks>
         public async Task RemoveAsync(string key)
         {
-            // Siempre eliminamos de la memoria local
+            _logger.LogInformation($"Eliminando clave de caché: {key}");
+            
+            // Verificar si es un patrón con comodín
+            if (key.Contains("*"))
+            {
+                // Para patrones con comodín, eliminamos todas las claves que coincidan del caché en memoria
+                var pattern = key.Replace("*", "");
+                var memoryKeys = _memoryCache.GetType()
+                    .GetProperty("EntriesCollection", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+                    ?.GetValue(_memoryCache) as System.Collections.ICollection;
+                
+                if (memoryKeys != null)
+                {
+                    var keysToRemove = new List<string>();
+                    
+                    foreach (var cacheItem in memoryKeys)
+                    {
+                        var cacheItemKey = cacheItem.GetType().GetProperty("Key")?.GetValue(cacheItem)?.ToString();
+                        if (cacheItemKey != null && cacheItemKey.StartsWith(pattern))
+                        {
+                            keysToRemove.Add(cacheItemKey);
+                        }
+                    }
+                    
+                    _logger.LogInformation($"Eliminando {keysToRemove.Count} claves que coinciden con el patrón '{pattern}*'");
+                    
+                    foreach (var keyToRemove in keysToRemove)
+                    {
+                        _memoryCache.Remove(keyToRemove);
+                    }
+                }
+                
+                // Si estamos en modo memoria, no intentamos acceder a Redis
+                if (_useMemoryCache)
+                {
+                    return;
+                }
+                
+                // Para Redis, no podemos usar directamente patrones en RemoveAsync
+                // En una implementación real, usaríamos SCAN + DEL para eliminar claves por patrón
+                // Pero para simplificar, solo registramos que se debería implementar
+                _logger.LogWarning($"La eliminación de claves por patrón '{key}' en Redis no está implementada completamente");
+                
+                return;
+            }
+            
+            // Para claves simples, eliminamos directamente
             _memoryCache.Remove(key);
             
             // Si estamos en modo memoria, no intentamos acceder a Redis

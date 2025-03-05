@@ -28,8 +28,23 @@ builder.Services.AddFluentValidationAutoValidation()
 
 // Configure Entity Framework Core with SQL Server
 // Note: In production, the connection string should be moved to user secrets or environment variables
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+// Check if we're running in a test environment
+var isTestEnvironment = builder.Environment.EnvironmentName == "Test" || 
+                       Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Test" ||
+                       AppDomain.CurrentDomain.GetAssemblies().Any(a => a.FullName.Contains("xunit"));
+
+if (isTestEnvironment)
+{
+    // In test environment, use InMemory database to avoid conflicts with SQL Server
+    builder.Services.AddDbContext<ApplicationDbContext>(options =>
+        options.UseInMemoryDatabase("TestDb"));
+}
+else
+{
+    // In normal environment, use SQL Server
+    builder.Services.AddDbContext<ApplicationDbContext>(options =>
+        options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+}
 
 // Configure Identity
 builder.Services.AddIdentity<ApplicationUser, Microsoft.AspNetCore.Identity.IdentityRole>(options =>

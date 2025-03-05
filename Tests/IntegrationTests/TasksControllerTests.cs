@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -29,13 +30,17 @@ public TasksControllerTests(WebApplicationFactory<Program> factory)
         {
             _factory = factory.WithWebHostBuilder(builder =>
             {
+                // Set the content root path to the current directory
+                builder.UseContentRoot(System.IO.Directory.GetCurrentDirectory());
+                
                 builder.ConfigureServices(services =>
                 {
-                    // Remove the app's ApplicationDbContext registration
-                    var descriptor = services.SingleOrDefault(
-                        d => d.ServiceType == typeof(DbContextOptions<ApplicationDbContext>));
+                    // Remove all existing DbContext registrations
+                    var descriptors = services.Where(
+                        d => d.ServiceType == typeof(DbContextOptions<ApplicationDbContext>) ||
+                             d.ServiceType == typeof(DbContextOptions)).ToList();
 
-                    if (descriptor != null)
+                    foreach (var descriptor in descriptors)
                     {
                         services.Remove(descriptor);
                     }
@@ -45,6 +50,19 @@ public TasksControllerTests(WebApplicationFactory<Program> factory)
                     {
                         options.UseInMemoryDatabase("InMemoryDbForTesting");
                     });
+                    
+                    // No necesitamos añadir servicios de Entity Framework explícitamente
+                    // ya que UseInMemoryDatabase ya lo hace
+
+                    // Desactivar la autenticación para las pruebas
+                    services.AddAuthentication(options =>
+                    {
+                        options.DefaultAuthenticateScheme = "Test";
+                        options.DefaultChallengeScheme = "Test";
+                        options.DefaultScheme = "Test";
+                    })
+                    .AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions, TestAuthHandler>(
+                        "Test", options => { });
 
                     // Build the service provider
                     var sp = services.BuildServiceProvider();
@@ -164,6 +182,100 @@ private void SeedDatabase(ApplicationDbContext context)
             // Assert
             response.EnsureSuccessStatusCode();
             Assert.Equal("text/html; charset=utf-8", response.Content.Headers.ContentType.ToString());
+        }
+
+        /// <summary>
+        /// Tests that the DeleteConfirmed action redirects to Index with forceReload=True.
+        /// </summary>
+        [Fact]
+        public async Task DeleteConfirmed_RedirectsToIndexWithForceReload()
+        {
+            // Arrange
+            var client = _factory.CreateClient();
+            var context = GetDbContext();
+            var taskId = context.Tasks.First().Id;
+            
+            // Create form content for the POST request
+            var formContent = new FormUrlEncodedContent(new[]
+            {
+                new KeyValuePair<string, string>("id", taskId.ToString()),
+                // Add anti-forgery token if needed
+            });
+
+            // Act
+            var response = await client.PostAsync($"/Tasks/Delete/{taskId}", formContent);
+
+            // Assert
+            Assert.Equal(HttpStatusCode.Found, response.StatusCode); // 302 Found (redirect)
+            
+            // Check that the Location header contains forceReload=True
+            var locationHeader = response.Headers.Location.ToString();
+            Assert.Contains("forceReload=True", locationHeader);
+        }
+
+        /// <summary>
+        /// Tests that the UpdateStatus action redirects to Index with forceReload=True.
+        /// </summary>
+        [Fact]
+        public async Task UpdateStatus_RedirectsToIndexWithForceReload()
+        {
+            // Arrange
+            var client = _factory.CreateClient();
+            var context = GetDbContext();
+            var taskId = context.Tasks.First().Id;
+            var newStatus = TodoTaskStatus.Completed;
+            
+            // Create form content for the POST request
+            var formContent = new FormUrlEncodedContent(new[]
+            {
+                new KeyValuePair<string, string>("id", taskId.ToString()),
+                new KeyValuePair<string, string>("newStatus", ((int)newStatus).ToString()),
+                // Add anti-forgery token if needed
+            });
+
+            // Act
+            var response = await client.PostAsync("/Tasks/UpdateStatus", formContent);
+
+            // Assert
+            Assert.Equal(HttpStatusCode.Found, response.StatusCode); // 302 Found (redirect)
+            
+            // Check that the Location header contains forceReload=True
+            var locationHeader = response.Headers.Location.ToString();
+            Assert.Contains("forceReload=True", locationHeader);
+        }
+
+        /// <summary>
+        /// Tests that the Edit action redirects to Index with forceReload=True.
+        /// </summary>
+        [Fact]
+        public async Task Edit_Post_RedirectsToIndexWithForceReload()
+        {
+            // Arrange
+            var client = _factory.CreateClient();
+            var context = GetDbContext();
+            var task = context.Tasks.First();
+            
+            // Create form content for the POST request
+            var formContent = new FormUrlEncodedContent(new[]
+            {
+                new KeyValuePair<string, string>("Id", task.Id.ToString()),
+                new KeyValuePair<string, string>("Description", "Updated Description"),
+                new KeyValuePair<string, string>("Status", ((int)task.Status).ToString()),
+                new KeyValuePair<string, string>("Priority", ((int)task.Priority).ToString()),
+                new KeyValuePair<string, string>("Category", task.Category),
+                // Add other required fields
+                // Add anti-forgery token if needed
+            });
+
+            // Act
+            var response = await client.PostAsync($"/Tasks/Edit/{task.Id}", formContent);
+
+            // Assert
+            Assert.Equal(HttpStatusCode.Found, response.StatusCode); // 302 Found (redirect)
+            
+            // Check that the Location header contains forceReload=True
+            var locationHeader = response.Headers.Location.ToString();
+            Assert.Contains("forceReload=True", locationHeader);
         }
 
         /// <summary>

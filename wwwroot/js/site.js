@@ -228,77 +228,106 @@ function updateTaskCardUI(taskId, newStatus) {
     // Convertir a entero para asegurar comparaciones correctas
     newStatus = parseInt(newStatus);
     
-    const taskCard = document.querySelector(`.task-card[data-task-id="${taskId}"]`);
-    if (!taskCard) {
-        console.warn(`No se encontró la tarjeta para la tarea ${taskId}`);
+    // Buscar la tarjeta en todas las vistas posibles
+    const taskElements = document.querySelectorAll(`[data-task-id="${taskId}"]`);
+    if (taskElements.length === 0) {
+        console.warn(`No se encontraron elementos para la tarea ${taskId}`);
         return;
     }
     
-    // Actualizar la clase de estado
-    taskCard.classList.remove('status-pending', 'status-in-progress', 'status-completed');
-    
-    const statusClass = newStatus === 0 ? 'status-pending' : 
-                        newStatus === 1 ? 'status-in-progress' : 
-                        'status-completed';
-    
-    taskCard.classList.add(statusClass);
-    
-    // Actualizar el badge de estado
-    const statusBadge = taskCard.querySelector('.badge[title="Estado"]');
-    if (statusBadge) {
-        // Actualizar clase del badge
-        statusBadge.className = `badge ${
-            newStatus === 0 ? 'bg-warning text-dark' : 
-            newStatus === 1 ? 'bg-primary' : 
-            'bg-success'
-        }`;
+    taskElements.forEach(element => {
+        // Actualizar clases de estado
+        element.classList.remove('status-pending', 'status-in-progress', 'status-completed');
+        element.classList.add(newStatus === 0 ? 'status-pending' : 
+                            newStatus === 1 ? 'status-in-progress' : 
+                            'status-completed');
         
-        // Actualizar icono
-        const icon = statusBadge.querySelector('i');
-        if (icon) {
-            icon.className = `bi ${
-                newStatus === 0 ? 'bi-hourglass' : 
-                newStatus === 1 ? 'bi-play-circle' : 
-                'bi-check-circle'
-            } me-1`;
+        // Actualizar badge de estado
+        const statusBadge = element.querySelector('.badge[title="Estado"]');
+        if (statusBadge) {
+            const statusName = getStatusName(newStatus);
+            const badgeClass = getStatusBadgeClass(newStatus);
+            const iconClass = getStatusIconClass(newStatus);
+            
+            statusBadge.className = `badge ${badgeClass}`;
+            
+            const icon = statusBadge.querySelector('i');
+            if (icon) {
+                icon.className = `bi ${iconClass} me-1`;
+            }
+            
+            // Actualizar texto del estado
+            if (statusBadge.lastChild && statusBadge.lastChild.nodeType === Node.TEXT_NODE) {
+                statusBadge.lastChild.nodeValue = statusName;
+            } else {
+                const iconHTML = icon ? icon.outerHTML : '';
+                statusBadge.innerHTML = `${iconHTML}${statusName}`;
+            }
         }
         
-        // Actualizar texto
-        const statusName = getStatusName(newStatus);
-        
-        // Reemplazar el texto del estado
-        if (statusBadge.lastChild && statusBadge.lastChild.nodeType === Node.TEXT_NODE) {
-            statusBadge.lastChild.nodeValue = statusName;
-        } else {
-            // Si no podemos encontrar el nodo de texto, reemplazar todo el contenido
-            const iconHTML = icon ? icon.outerHTML : '';
-            statusBadge.innerHTML = `${iconHTML} ${statusName}`;
+        // Actualizar botones de acción rápida
+        const quickActions = element.querySelector('.quick-actions');
+        if (quickActions) {
+            const buttonsHtml = `
+                ${newStatus !== 2 ? `
+                    <button type="button" class="btn btn-success btn-sm quick-status-change" 
+                            data-task-id="${taskId}" data-status="2"
+                            data-bs-toggle="tooltip" title="Marcar como completada">
+                        <i class="bi bi-check-lg"></i>
+                    </button>
+                ` : ''}
+                ${newStatus === 0 ? `
+                    <button type="button" class="btn btn-primary btn-sm quick-status-change" 
+                            data-task-id="${taskId}" data-status="1"
+                            data-bs-toggle="tooltip" title="Iniciar tarea">
+                        <i class="bi bi-play-fill"></i>
+                    </button>
+                ` : ''}
+            `;
+            
+            const btnGroup = quickActions.querySelector('.btn-group');
+            if (btnGroup) {
+                // Mantener los botones de editar y eliminar
+                const editBtn = btnGroup.querySelector('a[href*="Edit"]');
+                const deleteBtn = btnGroup.querySelector('a[href*="Delete"]');
+                btnGroup.innerHTML = buttonsHtml + (editBtn ? editBtn.outerHTML : '') + (deleteBtn ? deleteBtn.outerHTML : '');
+            }
         }
-    }
+    });
     
     // Si estamos en vista Kanban, mover la tarjeta a la columna correspondiente
     const kanbanView = document.getElementById('kanbanView');
-    if (kanbanView && kanbanView.style.display !== 'none') {
-        const targetColumn = document.querySelector(`.task-column[data-status="${newStatus}"]`);
+    if (kanbanView && window.getComputedStyle(kanbanView).display !== 'none') {
+        const targetColumn = kanbanView.querySelector(`.task-column[data-status="${newStatus}"] .task-column-body`);
         if (targetColumn) {
-            // Obtener el contenedor de la tarjeta
-            const taskItem = taskCard.closest('.task-item');
-            const sourceItem = taskItem || taskCard;
-            
-            // En lugar de clonar, simplemente mover la tarjeta para mantener el formato exacto
-            // Esto evita problemas con la clonación que pueden afectar al formato
-            
-            // Añadir animación
-            sourceItem.classList.add('fade-in');
-            
-            // Mover la tarjeta a la nueva columna
-            const columnBody = targetColumn.querySelector('.task-column-body');
-            if (columnBody) {
-                // Mover la tarjeta en lugar de clonarla
-                columnBody.appendChild(sourceItem);
+            const taskItem = document.querySelector(`.task-item[data-task-id="${taskId}"]`);
+            if (taskItem) {
+                // Añadir clases de animación
+                taskItem.classList.add('task-moving');
+                
+                // Mover la tarjeta a la nueva columna
+                targetColumn.appendChild(taskItem);
+                
+                // Trigger reflow para reiniciar la animación
+                void taskItem.offsetWidth;
+                
+                // Quitar clase de animación después de un breve retraso
+                setTimeout(() => {
+                    taskItem.classList.remove('task-moving');
+                }, 300);
+                
+                // Actualizar contadores
+                updateTaskCounters();
+                
+                // Reinicializar tooltips
+                const tooltips = taskItem.querySelectorAll('[data-bs-toggle="tooltip"]');
+                tooltips.forEach(el => new bootstrap.Tooltip(el));
             }
         }
     }
+    
+    // Configurar nuevos event listeners para los botones de estado
+    setupTaskStatusChanges();
 }
 
 // Función para configurar drag & drop para una tarjeta específica

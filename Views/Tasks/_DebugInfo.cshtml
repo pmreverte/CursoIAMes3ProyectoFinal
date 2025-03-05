@@ -1,0 +1,81 @@
+@{
+    bool showDebugInfo = ViewBag.ShowDebugInfo ?? false;
+}
+
+<div id="debugControls" class="mb-3">
+    <div class="form-check form-switch">
+        <input class="form-check-input" type="checkbox" id="debugModeSwitch" @(showDebugInfo ? "checked" : "")>
+        <label class="form-check-label" for="debugModeSwitch">Modo depuración</label>
+    </div>
+</div>
+
+<div id="debugInfoPanel" class="alert alert-info mb-4 @(showDebugInfo ? "" : "d-none")">
+    <h5>Información de depuración:</h5>
+    <div id="debugMessages">
+        <!-- Los mensajes de depuración se mostrarán aquí -->
+    </div>
+</div>
+
+<script>
+    // Función para añadir un mensaje de depuración
+    function addDebugMessage(message) {
+        const debugModeEnabled = document.getElementById('debugModeSwitch').checked;
+        if (!debugModeEnabled) return;
+        
+        const debugMessages = document.getElementById('debugMessages');
+        const messageElement = document.createElement('p');
+        messageElement.className = 'mb-1';
+        messageElement.textContent = message;
+        debugMessages.appendChild(messageElement);
+        
+        // Limitar a 20 mensajes para evitar que crezca demasiado
+        if (debugMessages.children.length > 20) {
+            debugMessages.removeChild(debugMessages.firstChild);
+        }
+    }
+    
+    // Configurar el interruptor de depuración
+    document.getElementById('debugModeSwitch').addEventListener('change', function() {
+        const debugInfoPanel = document.getElementById('debugInfoPanel');
+        if (this.checked) {
+            debugInfoPanel.classList.remove('d-none');
+            localStorage.setItem('debugMode', 'true');
+        } else {
+            debugInfoPanel.classList.add('d-none');
+            localStorage.setItem('debugMode', 'false');
+            // Limpiar mensajes al desactivar
+            document.getElementById('debugMessages').innerHTML = '';
+        }
+    });
+    
+    // Cargar preferencia guardada
+    document.addEventListener('DOMContentLoaded', function() {
+        const savedDebugMode = localStorage.getItem('debugMode');
+        if (savedDebugMode === 'true') {
+            document.getElementById('debugModeSwitch').checked = true;
+            document.getElementById('debugInfoPanel').classList.remove('d-none');
+        }
+    });
+    
+    // Sobrescribir console.log para capturar mensajes de depuración
+    const originalConsoleLog = console.log;
+    console.log = function() {
+        // Llamar a la función original
+        originalConsoleLog.apply(console, arguments);
+        
+        // Convertir los argumentos a una cadena
+        const message = Array.from(arguments).map(arg => {
+            if (typeof arg === 'object') {
+                try {
+                    return JSON.stringify(arg);
+                } catch (e) {
+                    return String(arg);
+                }
+            }
+            return String(arg);
+        }).join(' ');
+        
+        // Añadir el mensaje al panel de depuración
+        addDebugMessage(message);
+    };
+</script>

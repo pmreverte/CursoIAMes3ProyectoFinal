@@ -41,8 +41,8 @@ public TasksUITests(WebApplicationFactory<Program> factory)
             
             _driver = new ChromeDriver(options);
             
-            // Start the web server
-            _baseUrl = "https://localhost:5001";
+            // Obtener la URL del servidor de pruebas
+            _baseUrl = _factory.Server.BaseAddress.ToString().TrimEnd('/');
         }
 
 /// <summary>

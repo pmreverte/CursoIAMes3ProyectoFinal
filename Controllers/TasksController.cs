@@ -24,6 +24,7 @@ namespace Sprint2.Controllers
         private readonly ILogger<TasksController> _logger;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IValidator<TodoTask> _taskValidator;
+        private readonly ICacheService _cacheService;
         private const int DefaultPageSize = 10;
 
         /// <summary>
@@ -33,16 +34,19 @@ namespace Sprint2.Controllers
         /// <param name="logger">The logger.</param>
         /// <param name="userManager">The user manager.</param>
         /// <param name="taskValidator">The FluentValidation validator for TodoTask.</param>
+        /// <param name="cacheService">The cache service.</param>
         public TasksController(
             ITaskService taskService, 
             ILogger<TasksController> logger,
             UserManager<ApplicationUser> userManager,
-            IValidator<TodoTask> taskValidator)
+            IValidator<TodoTask> taskValidator,
+            ICacheService cacheService)
         {
             _taskService = taskService;
             _logger = logger;
             _userManager = userManager;
             _taskValidator = taskValidator;
+            _cacheService = cacheService;
         }
 
         /// <summary>
@@ -58,13 +62,26 @@ namespace Sprint2.Controllers
         /// </summary>
         /// <param name="filter">The task filter criteria.</param>
         /// <param name="page">The page number for pagination.</param>
+        /// <param name="forceReload">Flag to force a reload of the cache.</param>
         /// <returns>The task list view.</returns>
-        public IActionResult Index(TaskFilter filter, int page = 1)
+        public IActionResult Index(TaskFilter filter, int page = 1, string forceReload = null)
         {
             try
             {
                 // Optimización: Reducir el tamaño de página para cargar más rápido
                 int pageSize = 20; // Aumentamos el tamaño de página para mostrar más tareas de una vez
+                
+                // Si se fuerza la recarga, invalidar la caché
+                bool shouldForceReload = !string.IsNullOrEmpty(forceReload) && 
+                                        (forceReload.Equals("True", StringComparison.OrdinalIgnoreCase) || 
+                                         forceReload.Equals("1"));
+                
+                if (shouldForceReload)
+                {
+                    _logger.LogInformation("Forzando recarga de la caché de tareas (forceReload={0})", forceReload);
+                    _cacheService.RemoveAsync("tasklist_*");
+                    _cacheService.RemoveAsync("categories");
+                }
                 
                 // Cargar las tareas directamente en el servidor
                 var viewModel = _taskService.GetTaskList(filter ?? new TaskFilter(), page, pageSize);
@@ -174,8 +191,20 @@ namespace Sprint2.Controllers
                 {
                     SanitizeTaskProperties(task);
                     _taskService.CreateTask(task);
+                    
+                    // Invalidar la caché para asegurar que la nueva tarea aparezca en la lista
+                    _cacheService.RemoveAsync("tasklist_*");
+                    _cacheService.RemoveAsync("categories");
+                    
+                    // Registrar información sobre la tarea creada
+                    _logger.LogInformation($"Tarea creada exitosamente: ID={task.Id}, Descripción='{task.Description}'");
+                    
+                    // Añadir mensaje de éxito
                     TempData["Success"] = "Tarea creada exitosamente.";
-                    return RedirectToAction(nameof(Index));
+                    
+                // Forzar una recarga para actualizar la lista de tareas
+                // Esto es necesario para que la tarea eliminada desaparezca de la lista
+                return RedirectToAction(nameof(Index), new { forceReload = "True" });
                 }
                 
                 // Add validation errors to ModelState
@@ -239,8 +268,16 @@ namespace Sprint2.Controllers
                 {
                     SanitizeTaskProperties(task);
                     _taskService.UpdateTask(task);
+                    
+                    // Registrar información sobre la tarea actualizada
+                    _logger.LogInformation($"Tarea actualizada exitosamente: ID={task.Id}, Descripción='{task.Description}'");
+                    
+                    // Añadir mensaje de éxito
                     TempData["Success"] = "Tarea actualizada exitosamente.";
-                    return RedirectToAction(nameof(Index));
+                    
+                // Forzar una recarga para actualizar la lista de tareas
+                // Esto es necesario para que la tarea eliminada desaparezca de la lista
+                return RedirectToAction(nameof(Index), new { forceReload = "True" });
                 }
                 
                 // Add validation errors to ModelState
@@ -297,8 +334,16 @@ namespace Sprint2.Controllers
             try
             {
                 _taskService.DeleteTask(id);
+                
+                // Registrar información sobre la tarea eliminada
+                _logger.LogInformation($"Tarea {id} eliminada exitosamente");
+                
+                // Añadir mensaje de éxito
                 TempData["Success"] = "Tarea eliminada exitosamente.";
-                return RedirectToAction(nameof(Index));
+                
+                // Forzar una recarga para actualizar la lista de tareas
+                // Esto es necesario para que la tarea eliminada desaparezca de la lista
+                return RedirectToAction(nameof(Index), new { forceReload = "True" });
             }
             catch (Exception ex)
             {
@@ -320,7 +365,7 @@ namespace Sprint2.Controllers
         /// </summary>
         /// <param name="id">The ID of the task to update.</param>
         /// <param name="newStatus">The new status of the task.</param>
-        /// <returns>A JSON result indicating success or failure.</returns>
+        /// <returns>Redirects to the Index action with forceReload=True.</returns>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public IActionResult UpdateStatus(int id, TodoTaskStatus newStatus)
@@ -334,57 +379,59 @@ namespace Sprint2.Controllers
                 if (task == null)
                 {
                     _logger.LogWarning($"Tarea {id} no encontrada");
-                    return NotFound();
+                    TempData["Error"] = "No se encontró la tarea.";
+                    return RedirectToAction(nameof(Index));
                 }
 
                 _logger.LogInformation($"Estado actual: {task.Status}, Nuevo estado: {newStatus}, IsOverdue: {task.IsOverdue}");
                 
-                // Crear una copia de la tarea para validación
-                var taskToValidate = new TodoTask
-                {
-                    Id = task.Id,
-                    Description = task.Description,
-                    Category = task.Category,
-                    DueDate = task.DueDate,
-                    Notes = task.Notes,
-                    Priority = task.Priority,
-                    CreatedAt = task.CreatedAt,
-                    Status = newStatus // Asignar el nuevo estado
-                };
+                // Validar solo la transición de estado, no toda la tarea
+                bool isValidTransition = true;
                 
-                // Validar la tarea con el nuevo estado
-                ValidationResult validationResult = _taskValidator.Validate(taskToValidate);
-                if (!validationResult.IsValid)
+                // Verificar si la transición de estado es válida
+                // Solo validamos que las tareas completadas no puedan volver a otro estado
+                if (task.IsCompleted && newStatus != TodoTaskStatus.Completed)
                 {
-                    var errors = string.Join(", ", validationResult.Errors.Select(e => $"{e.PropertyName}: {e.ErrorMessage}"));
-                    _logger.LogWarning($"Validación fallida al cambiar estado de {task.Status} a {newStatus}: {errors}");
+                    isValidTransition = false;
+                    _logger.LogWarning($"Transición de estado inválida: No se puede cambiar una tarea completada a {newStatus}");
+                    TempData["Error"] = "Error de validación: La transición de estado no es válida. Las tareas completadas no pueden volver a pendiente.";
+                    return RedirectToAction(nameof(Index));
+                }
+                
+                // Si la transición es válida, actualizar solo el estado
+                if (isValidTransition)
+                {
+                    // Actualizar solo el estado usando el método del servicio
+                    var updatedTask = _taskService.UpdateTaskStatus(id, newStatus);
+                    if (updatedTask == null)
+                    {
+                        TempData["Error"] = "No se pudo actualizar la tarea.";
+                        return RedirectToAction(nameof(Index));
+                    }
                     
-                    return Json(new { 
-                        success = false, 
-                        message = "Error de validación: " + errors
-                    });
+                    // Invalidar la caché para asegurar que la tarea actualizada aparezca en la lista
+                    _cacheService.RemoveAsync($"task_{id}");
+                    _cacheService.RemoveAsync("tasklist_*");
+                    _cacheService.RemoveAsync("categories");
+                    
+                    _logger.LogInformation($"Tarea {id} actualizada exitosamente a estado {newStatus}");
+                    
+                    // Añadir mensaje de éxito
+                    TempData["Success"] = $"Tarea actualizada a {(newStatus == TodoTaskStatus.Completed ? "Completada" : newStatus == TodoTaskStatus.InProgress ? "En Progreso" : "Pendiente")}.";
+                    
+                    // Forzar una recarga para actualizar la lista de tareas
+                    // Esto es necesario para que la tarea actualizada aparezca en la columna correcta
+                    return RedirectToAction(nameof(Index), new { forceReload = "True" });
                 }
                 
-                // Actualizar solo el estado usando el nuevo método
-                var updatedTask = _taskService.UpdateTaskStatus(id, newStatus);
-                if (updatedTask == null)
-                {
-                    return Json(new { success = false, message = "No se pudo actualizar la tarea" });
-                }
-                
-                _logger.LogInformation($"Tarea {id} actualizada exitosamente a estado {newStatus}");
-                
-                // Devolver la tarea actualizada para que el cliente pueda actualizar la UI
-                return Json(new { 
-                    success = true,
-                    taskId = updatedTask.Id,
-                    newStatus = (int)updatedTask.Status
-                });
+                TempData["Error"] = "Error de validación: Transición de estado no válida.";
+                return RedirectToAction(nameof(Index));
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, $"Error al actualizar el estado de la tarea {id} a {newStatus}");
-                return Json(new { success = false, message = "Error al actualizar el estado: " + ex.Message });
+                TempData["Error"] = "Error al actualizar el estado de la tarea.";
+                return RedirectToAction(nameof(Index));
             }
         }
         

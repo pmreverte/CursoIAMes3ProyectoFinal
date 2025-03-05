@@ -390,27 +390,67 @@ body {
     box-shadow: var(--box-shadow);
 }
 
-/* Estilos para las vistas de tareas */
-.view-container {
+/* Estilos para las vistas de tareas - Reglas con alta especificidad */
+html body .view-container {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    height: 0 !important;
+    overflow: hidden !important;
+    position: absolute !important;
+    pointer-events: none !important;
+}
+
+html body .view-container.active,
+html body #cardView.active,
+html body #listView.active,
+html body #kanbanView.active {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    height: auto !important;
+    overflow: visible !important;
+    position: static !important;
+    pointer-events: auto !important;
+}
+
+/* Reglas específicas para cada vista */
+html body #cardView:not(.active) {
     display: none !important;
 }
 
-.view-container.active {
-    display: block !important;
-}
-
-/* Ocultar explícitamente las vistas no activas */
-#cardView:not(.active),
-#listView:not(.active),
-#kanbanView:not(.active) {
+html body #listView:not(.active) {
     display: none !important;
 }
 
-/* Mostrar explícitamente las vistas activas */
-#cardView.active,
-#listView.active,
-#kanbanView.active {
+html body #kanbanView:not(.active) {
+    display: none !important;
+}
+
+/* Reglas para asegurar que las vistas activas sean visibles */
+html body #cardView.active {
     display: block !important;
+}
+
+html body #listView.active {
+    display: block !important;
+}
+
+html body #kanbanView.active {
+    display: block !important;
+}
+
+/* Regla para evitar conflictos con Bootstrap */
+.d-none.active {
+    display: block !important;
+}
+
+/* Estilos para botones de vista */
+.btn-group[role="group"][aria-label="Vista de tareas"] .btn.active {
+    background-color: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+    z-index: 1;
 }
 
 /* Estilos para los botones de vista */
@@ -439,12 +479,32 @@ body {
     }
 }
 
+@keyframes moveTask {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(0.95);
+        opacity: 0.8;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
 .fade-in {
     animation: fadeIn 0.5s ease forwards;
 }
 
 .task-item-animated {
     animation: slideIn 0.4s ease forwards;
+}
+
+.task-moving {
+    animation: moveTask 0.3s ease-in-out;
+    opacity: 0.8;
 }
 
 /* Indicador de carga */

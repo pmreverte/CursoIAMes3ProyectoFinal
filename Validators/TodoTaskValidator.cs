@@ -179,11 +179,14 @@ namespace Sprint2.Validators
 
         /// <summary>
         /// Validates that overdue tasks are properly handled.
-        /// Esta regla se ha modificado para permitir cambios de estado en tareas vencidas.
         /// </summary>
         private bool HaveValidStatusForDueDate(TodoTask task)
         {
-            // Permitimos cualquier estado para tareas vencidas
+            // Si la tarea está vencida, debe estar completada
+            if (task.DueDate.HasValue && task.DueDate.Value.Date < DateTime.UtcNow.Date)
+            {
+                return task.Status == TodoTaskStatus.Completed;
+            }
             return true;
         }
     }
