@@ -1,0 +1,316 @@
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Editar Tarea";
+}
+@model TodoTask
+@using Sprint2.Models
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+
+<div class="container">
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="display-5 fw-bold">
+                <i class="bi bi-pencil-square me-2"></i>Editar Tarea
+            </h1>
+            <p class="text-muted">Modifica los detalles de la tarea</p>
+        </div>
+    </div>
+
+    @await Html.PartialAsync("_Notifications")
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="card-title mb-0">Información de la Tarea</h5>
+                </div>
+                <div class="card-body">
+                    <form asp-action="Edit" method="post" id="editTaskForm">
+                        <input type="hidden" asp-for="Id" />
+                        <input type="hidden" asp-for="CreatedAt" />
+
+                        <div class="mb-4">
+                            <label asp-for="Description" class="form-label">
+                                <i class="bi bi-pencil-square me-1"></i>Descripción
+                            </label>
+                            <input asp-for="Description" class="form-control form-control-lg" 
+                                   placeholder="¿Qué necesitas hacer?" autofocus />
+                            <span asp-validation-for="Description" class="text-danger"></span>
+                        </div>
+
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <label asp-for="Status" class="form-label">
+                                    <i class="bi bi-check-circle me-1"></i>Estado
+                                </label>
+                                <select asp-for="Status" class="form-select status-select" 
+                                        asp-items="Html.GetEnumSelectList<TodoTaskStatus>()">
+                                </select>
+                                <span asp-validation-for="Status" class="text-danger"></span>
+                                <div class="form-text">Estado actual de la tarea</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="Priority" class="form-label">
+                                    <i class="bi bi-flag me-1"></i>Prioridad
+                                </label>
+                                <select asp-for="Priority" class="form-select priority-select" 
+                                        asp-items="Html.GetEnumSelectList<Priority>()">
+                                </select>
+                                <span asp-validation-for="Priority" class="text-danger"></span>
+                                <div class="form-text">Nivel de importancia de la tarea</div>
+                            </div>
+                        </div>
+
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <label asp-for="Category" class="form-label">
+                                    <i class="bi bi-tag me-1"></i>Categoría
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-tag"></i></span>
+                                    <input asp-for="Category" class="form-control" list="categoryList" 
+                                           placeholder="Selecciona o crea una categoría" />
+                                </div>
+                                <datalist id="categoryList">
+                                    @foreach (var category in ViewBag.Categories)
+                                    {
+                                        <option value="@category"></option>
+                                    }
+                                </datalist>
+                                <span asp-validation-for="Category" class="text-danger"></span>
+                                <div class="form-text">Grupo o tipo de tarea (opcional)</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="DueDate" class="form-label">
+                                    <i class="bi bi-calendar me-1"></i>Fecha de Vencimiento
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-calendar"></i></span>
+                                    <input asp-for="DueDate" class="form-control" type="date" />
+                                </div>
+                                <span asp-validation-for="DueDate" class="text-danger"></span>
+                                <div class="form-text">Fecha límite para completar la tarea (opcional)</div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label asp-for="Notes" class="form-label">
+                                <i class="bi bi-journal-text me-1"></i>Notas
+                            </label>
+                            <textarea asp-for="Notes" class="form-control" rows="4" 
+                                      placeholder="Información adicional sobre la tarea..."></textarea>
+                            <span asp-validation-for="Notes" class="text-danger"></span>
+                            <div class="form-text">
+                                <span id="notesCounter">0</span>/500 caracteres
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between mt-4">
+                            <a asp-action="Index" class="btn btn-outline-secondary btn-lg">
+                                <i class="bi bi-arrow-left me-1"></i> Volver
+                            </a>
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="bi bi-save me-1"></i> Guardar Cambios
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-info-circle me-1"></i>Información de la Tarea
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="bg-light rounded-circle p-3 me-3">
+                            <i class="bi bi-calendar-event fs-4 text-primary"></i>
+                        </div>
+                        <div>
+                            <h6 class="mb-0">Fecha de Creación</h6>
+                            <p class="mb-0 text-muted">@Model.CreatedAt.ToLocalTime().ToString("g")</p>
+                        </div>
+                    </div>
+
+                    @if (Model.DueDate.HasValue)
+                    {
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="bg-light rounded-circle p-3 me-3">
+                                <i class="bi bi-calendar-check fs-4 @(Model.IsOverdue ? "text-danger" : "text-primary")"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-0">Fecha de Vencimiento</h6>
+                                <p class="mb-0 @(Model.IsOverdue ? "text-danger" : "text-muted")">
+                                    @Model.DueDate.Value.ToLocalTime().ToString("d")
+                                </p>
+                            </div>
+                        </div>
+                    }
+
+                    @if (Model.IsOverdue)
+                    {
+                        <div class="alert alert-danger mt-3">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-exclamation-triangle-fill fs-4 me-2"></i>
+                                <div>
+                                    <strong>¡Atención!</strong>
+                                    <p class="mb-0">Esta tarea está vencida. Actualice la fecha de vencimiento o marque como completada.</p>
+                                </div>
+                            </div>
+                        </div>
+                    }
+
+                    <div class="mt-4">
+                        <h6 class="mb-3">Acciones Rápidas</h6>
+                        <div class="d-grid gap-2">
+                            @if (Model.Status != TodoTaskStatus.Completed)
+                            {
+                                <button type="button" class="btn btn-success quick-status-change" 
+                                        data-task-id="@Model.Id" data-status="@((int)TodoTaskStatus.Completed)">
+                                    <i class="bi bi-check-circle me-2"></i>Marcar como Completada
+                                </button>
+                            }
+                            @if (Model.Status == TodoTaskStatus.Pending)
+                            {
+                                <button type="button" class="btn btn-primary quick-status-change" 
+                                        data-task-id="@Model.Id" data-status="@((int)TodoTaskStatus.InProgress)">
+                                    <i class="bi bi-play-circle me-2"></i>Iniciar Tarea
+                                </button>
+                            }
+                            <a href="@Url.Action("Delete", "Tasks", new { id = Model.Id })" class="btn btn-outline-danger">
+                                <i class="bi bi-trash me-2"></i>Eliminar Tarea
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Validación del lado del cliente para la fecha de vencimiento
+            const dueDateInput = document.getElementById('DueDate');
+            if (dueDateInput) {
+                const today = new Date().toISOString().split('T')[0];
+                dueDateInput.setAttribute('min', today);
+            }
+            
+            // Contador de caracteres para las notas
+            const notesTextarea = document.getElementById('Notes');
+            const notesCounter = document.getElementById('notesCounter');
+            if (notesTextarea && notesCounter) {
+                notesTextarea.addEventListener('input', function() {
+                    notesCounter.textContent = this.value.length;
+                    
+                    // Cambiar color cuando se acerca al límite
+                    if (this.value.length > 450) {
+                        notesCounter.classList.add('text-danger');
+                    } else {
+                        notesCounter.classList.remove('text-danger');
+                    }
+                });
+                
+                // Inicializar contador
+                notesTextarea.dispatchEvent(new Event('input'));
+            }
+            
+            // Estilizar select de prioridad
+            const prioritySelect = document.querySelector('.priority-select');
+            if (prioritySelect) {
+                prioritySelect.addEventListener('change', function() {
+                    // Remover clases anteriores
+                    this.classList.remove('border-success', 'border-warning', 'border-danger');
+                    
+                    // Añadir clase según valor seleccionado
+                    switch (this.value) {
+                        case '0': // Low
+                            this.classList.add('border-success');
+                            break;
+                        case '1': // Medium
+                            this.classList.add('border-warning');
+                            break;
+                        case '2': // High
+                        case '3': // Urgent
+                            this.classList.add('border-danger');
+                            break;
+                    }
+                });
+                
+                // Inicializar estilo
+                prioritySelect.dispatchEvent(new Event('change'));
+            }
+            
+            // Estilizar select de estado
+            const statusSelect = document.querySelector('.status-select');
+            if (statusSelect) {
+                statusSelect.addEventListener('change', function() {
+                    // Remover clases anteriores
+                    this.classList.remove('border-warning', 'border-primary', 'border-success');
+                    
+                    // Añadir clase según valor seleccionado
+                    switch (this.value) {
+                        case '0': // Pending
+                            this.classList.add('border-warning');
+                            break;
+                        case '1': // InProgress
+                            this.classList.add('border-primary');
+                            break;
+                        case '2': // Completed
+                            this.classList.add('border-success');
+                            break;
+                    }
+                });
+                
+                // Inicializar estilo
+                statusSelect.dispatchEvent(new Event('change'));
+            }
+            
+            // Actualizar estado de tarea mediante AJAX
+            document.querySelectorAll('.quick-status-change').forEach(button => {
+                button.addEventListener('click', function() {
+                    const taskId = this.getAttribute('data-task-id');
+                    const newStatus = this.getAttribute('data-status');
+                    
+                    if (taskId && newStatus) {
+                        updateTaskStatus(taskId, newStatus);
+                    }
+                });
+            });
+            
+            function updateTaskStatus(taskId, newStatus) {
+                // Obtener el token anti-falsificación
+                const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+                
+                // Crear form data
+                const formData = new FormData();
+                formData.append('id', taskId);
+                formData.append('newStatus', newStatus);
+                formData.append('__RequestVerificationToken', token);
+                
+                // Enviar solicitud AJAX
+                fetch('@Url.Action("UpdateStatus")', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert('Error al actualizar el estado: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    alert('Error al actualizar el estado de la tarea');
+                });
+            }
+        });
+    </script>
+}

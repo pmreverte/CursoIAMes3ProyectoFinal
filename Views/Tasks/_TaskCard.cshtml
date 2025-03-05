@@ -1,0 +1,105 @@
+@using Sprint2.Models
+@model TodoTask
+
+<div class="card mb-3 task-card @(Model.IsOverdue ? "overdue" : "")" data-task-id="@Model.Id">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start">
+            <div>
+                <h5 class="card-title">@Model.Description</h5>
+                <div class="mb-2">
+                    @if (!string.IsNullOrEmpty(Model.Category))
+                    {
+                        <span class="badge bg-info" data-bs-toggle="tooltip" title="Categoría">
+                            <i class="bi bi-tag-fill me-1"></i>@Model.Category
+                        </span>
+                    }
+                    <span class="badge @(Model.Priority switch {
+                        Priority.Low => "bg-success",
+                        Priority.Medium => "bg-warning text-dark",
+                        Priority.High => "bg-danger",
+                        Priority.Urgent => "bg-danger text-white",
+                        _ => "bg-secondary"
+                    })" data-bs-toggle="tooltip" title="Prioridad">
+                        <i class="bi @(Model.Priority switch {
+                            Priority.Low => "bi-arrow-down-circle",
+                            Priority.Medium => "bi-dash-circle",
+                            Priority.High => "bi-arrow-up-circle",
+                            Priority.Urgent => "bi-exclamation-circle",
+                            _ => "bi-circle"
+                        }) me-1"></i>@Model.Priority
+                    </span>
+                    <span class="badge @(Model.Status switch {
+                        TodoTaskStatus.Pending => "bg-warning text-dark",
+                        TodoTaskStatus.InProgress => "bg-primary",
+                        TodoTaskStatus.Completed => "bg-success",
+                        _ => "bg-secondary"
+                    })" data-bs-toggle="tooltip" title="Estado">
+                        <i class="bi @(Model.Status switch {
+                            TodoTaskStatus.Pending => "bi-hourglass",
+                            TodoTaskStatus.InProgress => "bi-play-circle",
+                            TodoTaskStatus.Completed => "bi-check-circle",
+                            _ => "bi-question-circle"
+                        }) me-1"></i>@Model.Status
+                    </span>
+                </div>
+            </div>
+            <div class="quick-actions">
+                <div class="btn-group">
+                    @if (Model.Status != TodoTaskStatus.Completed)
+                    {
+                        <button type="button" class="btn btn-success btn-sm quick-status-change" 
+                                data-task-id="@Model.Id" data-status="@((int)TodoTaskStatus.Completed)"
+                                data-bs-toggle="tooltip" title="Marcar como completada">
+                            <i class="bi bi-check-lg"></i>
+                        </button>
+                    }
+                    @if (Model.Status == TodoTaskStatus.Pending)
+                    {
+                        <button type="button" class="btn btn-primary btn-sm quick-status-change" 
+                                data-task-id="@Model.Id" data-status="@((int)TodoTaskStatus.InProgress)"
+                                data-bs-toggle="tooltip" title="Iniciar tarea">
+                            <i class="bi bi-play-fill"></i>
+                        </button>
+                    }
+                    <a href="@Url.Action("Edit", "Tasks", new { id = Model.Id })" class="btn btn-secondary btn-sm"
+                       data-bs-toggle="tooltip" title="Editar tarea">
+                        <i class="bi bi-pencil-square"></i>
+                    </a>
+                    <a href="@Url.Action("Delete", "Tasks", new { id = Model.Id })" class="btn btn-danger btn-sm"
+                       data-bs-toggle="tooltip" title="Eliminar tarea">
+                        <i class="bi bi-trash"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        @if (!string.IsNullOrEmpty(Model.Notes))
+        {
+            <div class="task-notes">
+                <p class="card-text">@Model.Notes</p>
+            </div>
+        }
+        
+        <div class="task-meta">
+            <i class="bi bi-calendar-event me-1"></i>Creada: @Model.CreatedAt.ToLocalTime().ToString("g")
+            @if (Model.DueDate.HasValue)
+            {
+                <span class="ms-3">
+                    <i class="bi bi-calendar-check me-1"></i>Vence: 
+                    <span class="@(Model.IsOverdue ? "text-danger fw-bold" : "")">
+                        @Model.DueDate.Value.ToLocalTime().ToString("d")
+                        @if (Model.IsOverdue)
+                        {
+                            <i class="bi bi-exclamation-triangle-fill ms-1" data-bs-toggle="tooltip" title="¡Tarea vencida!"></i>
+                        }
+                    </span>
+                </span>
+            }
+        </div>
+        
+        <div class="drag-handle mt-2 text-center text-muted">
+            <small class="d-block mb-1">Arrastra para cambiar el estado</small>
+            <i class="bi bi-grip-horizontal"></i>
+        </div>
+    </div>
+</div>

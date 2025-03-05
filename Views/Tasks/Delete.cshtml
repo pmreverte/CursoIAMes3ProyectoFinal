@@ -1,0 +1,237 @@
+@{
+    // Establece el diseño de la página
+    Layout = "_Layout";
+    // Define el título de la página
+    ViewData["Title"] = "Eliminar Tarea";
+}
+
+@model TodoTask
+
+@using Sprint2.Models
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+
+<div class="container">
+    <div class="row mb-4">
+        <div class="col">
+            <!-- Título de la página con icono -->
+            <h1 class="display-5 fw-bold text-danger">
+                <i class="bi bi-trash me-2"></i>Eliminar Tarea
+            </h1>
+            <!-- Descripción de la acción -->
+            <p class="text-muted">Confirme la eliminación de esta tarea</p>
+        </div>
+    </div>
+
+    <!-- Muestra notificaciones parciales -->
+    @await Html.PartialAsync("_Notifications")
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card shadow-sm border-danger">
+                <div class="card-header bg-danger text-white">
+                    <!-- Título de confirmación -->
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>Confirmar Eliminación
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- Alerta de advertencia -->
+                    <div class="alert alert-warning">
+                        <div class="d-flex">
+                            <i class="bi bi-exclamation-triangle-fill fs-1 me-3 text-warning"></i>
+                            <div>
+                                <h4 class="alert-heading">¡Atención!</h4>
+                                <p>¿Está seguro que desea eliminar esta tarea? Esta acción no se puede deshacer.</p>
+                                <hr>
+                                <p class="mb-0">Una vez eliminada, toda la información asociada a esta tarea se perderá permanentemente.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Detalles de la tarea -->
+                    <div class="card mb-4 shadow-sm">
+                        <div class="card-header bg-light">
+                            <h5 class="card-title mb-0">Detalles de la Tarea</h5>
+                        </div>
+                        <div class="card-body">
+                            <h4>@Model.Description</h4>
+                            
+                            <div class="mb-3">
+                                <!-- Muestra la prioridad de la tarea con un badge -->
+                                <span class="badge @(Model.Priority switch {
+                                    Priority.Low => "bg-success",
+                                    Priority.Medium => "bg-warning text-dark",
+                                    Priority.High => "bg-danger",
+                                    Priority.Urgent => "bg-danger text-white",
+                                    _ => "bg-secondary"
+                                })">
+                                    <i class="bi @(Model.Priority switch {
+                                        Priority.Low => "bi-arrow-down-circle",
+                                        Priority.Medium => "bi-dash-circle",
+                                        Priority.High => "bi-arrow-up-circle",
+                                        Priority.Urgent => "bi-exclamation-circle",
+                                        _ => "bi-circle"
+                                    }) me-1"></i>@Model.Priority
+                                </span>
+                                
+                                <!-- Muestra el estado de la tarea con un badge -->
+                                <span class="badge @(Model.Status switch {
+                                    TodoTaskStatus.Pending => "bg-warning text-dark",
+                                    TodoTaskStatus.InProgress => "bg-primary",
+                                    TodoTaskStatus.Completed => "bg-success",
+                                    _ => "bg-secondary"
+                                })">
+                                    <i class="bi @(Model.Status switch {
+                                        TodoTaskStatus.Pending => "bi-hourglass",
+                                        TodoTaskStatus.InProgress => "bi-play-circle",
+                                        TodoTaskStatus.Completed => "bi-check-circle",
+                                        _ => "bi-question-circle"
+                                    }) me-1"></i>@Model.Status
+                                </span>
+                                
+                                <!-- Muestra la categoría de la tarea si existe -->
+                                @if (!string.IsNullOrEmpty(Model.Category))
+                                {
+                                    <span class="badge bg-info">
+                                        <i class="bi bi-tag-fill me-1"></i>@Model.Category
+                                    </span>
+                                }
+                            </div>
+                            
+                            <!-- Muestra las notas de la tarea si existen -->
+                            @if (!string.IsNullOrEmpty(Model.Notes))
+                            {
+                                <div class="card bg-light mb-3">
+                                    <div class="card-body py-2">
+                                        <small class="text-muted">Notas:</small>
+                                        <p class="mb-0">@Model.Notes</p>
+                                    </div>
+                                </div>
+                            }
+                            
+                            <!-- Información de creación y vencimiento -->
+                            <div class="d-flex justify-content-between text-muted small">
+                                <div>
+                                    <i class="bi bi-calendar-event me-1"></i>Creada: @Model.CreatedAt.ToLocalTime().ToString("g")
+                                </div>
+                                @if (Model.DueDate.HasValue)
+                                {
+                                    <div>
+                                        <i class="bi bi-calendar-check me-1"></i>Vence: 
+                                        <span class="@(Model.IsOverdue ? "text-danger fw-bold" : "")">
+                                            @Model.DueDate.Value.ToLocalTime().ToString("d")
+                                            @if (Model.IsOverdue)
+                                            {
+                                                <i class="bi bi-exclamation-triangle-fill ms-1"></i>
+                                            }
+                                        </span>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Formulario para confirmar la eliminación -->
+                    <form asp-action="Delete" method="post" class="mt-4">
+                        <input type="hidden" asp-for="Id" />
+                        <div class="d-flex justify-content-between">
+                            <a asp-action="Index" class="btn btn-outline-secondary btn-lg">
+                                <i class="bi bi-arrow-left me-1"></i>Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-danger btn-lg">
+                                <i class="bi bi-trash me-1"></i>Confirmar Eliminación
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-info-circle me-1"></i>Información
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- Información adicional sobre la eliminación -->
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle-fill me-2"></i>
+                        <span>Antes de eliminar, considere si esta tarea podría ser útil en el futuro.</span>
+                    </div>
+                    
+                    <!-- Alternativas a la eliminación -->
+                    <div class="alert alert-secondary">
+                        <i class="bi bi-lightbulb-fill me-2"></i>
+                        <span>Alternativas a la eliminación:</span>
+                        <ul class="mb-0 mt-2">
+                            <li>Marcar como completada</li>
+                            <li>Actualizar la fecha de vencimiento</li>
+                            <li>Cambiar la prioridad</li>
+                        </ul>
+                    </div>
+                    
+                    <!-- Opciones adicionales -->
+                    <div class="d-grid gap-2 mt-4">
+                        <a href="@Url.Action("Edit", "Tasks", new { id = Model.Id })" class="btn btn-outline-primary">
+                            <i class="bi bi-pencil-square me-2"></i>Editar en lugar de eliminar
+                        </a>
+                        @if (Model.Status != TodoTaskStatus.Completed)
+                        {
+                            <button type="button" class="btn btn-outline-success quick-status-change" 
+                                    data-task-id="@Model.Id" data-status="@((int)TodoTaskStatus.Completed)">
+                                <i class="bi bi-check-circle me-2"></i>Marcar como Completada
+                            </button>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Actualizar estado de tarea mediante AJAX
+            document.querySelectorAll('.quick-status-change').forEach(button => {
+                button.addEventListener('click', function() {
+                    const taskId = this.getAttribute('data-task-id');
+                    const newStatus = this.getAttribute('data-status');
+                    
+                    if (taskId && newStatus) {
+                        updateTaskStatus(taskId, newStatus);
+                    }
+                });
+            });
+            
+            function updateTaskStatus(taskId, newStatus) {
+                // Obtener el token anti-falsificación
+                const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+                
+                // Crear form data
+                const formData = new FormData();
+                formData.append('id', taskId);
+                formData.append('newStatus', newStatus);
+                formData.append('__RequestVerificationToken', token);
+                
+                // Enviar solicitud AJAX
+                fetch('@Url.Action("UpdateStatus")', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.href = '@Url.Action("Index")';
+                    } else {
+                        alert('Error al actualizar el estado: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    alert('Error al actualizar el estado de la tarea');
+                });
+            }
+        });
+    </script>
+}

@@ -1,0 +1,661 @@
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Gestión de Tareas";
+    bool loadTasksAsync = ViewBag.LoadTasksAsync ?? false;
+}
+@model TaskListViewModel
+@using Sprint2.Models
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+
+<div class="container">
+    @Html.AntiForgeryToken()
+    
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <h1 class="display-5 fw-bold">
+                <i class="bi bi-list-check me-2"></i>Mis Tareas
+            </h1>
+            <p class="text-muted">Gestiona tus tareas de forma eficiente</p>
+        </div>
+        <div class="col-md-6 text-md-end d-flex align-items-center justify-content-md-end">
+            <a asp-action="Create" class="btn btn-primary btn-lg">
+                <i class="bi bi-plus-circle me-2"></i>Nueva Tarea
+            </a>
+        </div>
+    </div>
+
+    @await Html.PartialAsync("_Notifications")
+
+    @await Html.PartialAsync("_Filters", Model.Filter)
+    
+    <!-- Indicador de carga global -->
+    <div id="globalLoadingIndicator" class="text-center py-5 @(loadTasksAsync ? "" : "d-none")">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Cargando tareas...</span>
+        </div>
+        <p class="mt-3">Cargando tareas...</p>
+    </div>
+
+    <div id="tasksContainer" class="@(loadTasksAsync ? "d-none" : "")">
+        <div id="debugInfo" class="alert alert-info mb-4">
+            <h5>Información de depuración:</h5>
+            <p>Número de tareas en el modelo: @Model.Tasks.Count()</p>
+            @if (Model.Tasks.Any())
+            {
+                <p>Primera tarea: ID=@Model.Tasks.First().Id, Descripción="@Model.Tasks.First().Description", Estado=@Model.Tasks.First().Status</p>
+            }
+            else
+            {
+                <p>No hay tareas en el modelo.</p>
+            }
+        </div>
+        
+        @if (!Model.Tasks.Any())
+        {
+            <div class="card mb-4">
+                <div class="card-body text-center py-5">
+                    <i class="bi bi-search display-1 text-muted mb-3"></i>
+                    <h3>No se encontraron tareas</h3>
+                    <p class="text-muted mb-4">No hay tareas que coincidan con los criterios de búsqueda.</p>
+                    <a asp-action="Create" class="btn btn-primary">
+                        <i class="bi bi-plus-circle me-2"></i>Crear Nueva Tarea
+                    </a>
+                </div>
+            </div>
+        }
+        else
+        {
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <div class="btn-group" role="group" aria-label="Vista de tareas">
+                    <a href="#" class="btn btn-outline-secondary" id="cardViewBtn">
+                        <i class="bi bi-grid me-1"></i>Tarjetas
+                    </a>
+                    <a href="#" class="btn btn-outline-secondary" id="listViewBtn">
+                        <i class="bi bi-list-ul me-1"></i>Lista
+                    </a>
+                    <a href="#" class="btn btn-outline-secondary active" id="kanbanViewBtn">
+                        <i class="bi bi-kanban me-1"></i>Kanban
+                    </a>
+                </div>
+            </div>
+            <div class="col-md-6 text-md-end">
+                <div class="dropdown d-inline-block">
+                    <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="sortDropdown" 
+                            data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-sort-down me-1"></i>Ordenar
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="sortDropdown">
+                        <li><a class="dropdown-item" href="#"><i class="bi bi-calendar-date me-2"></i>Fecha de creación</a></li>
+                        <li><a class="dropdown-item" href="#"><i class="bi bi-calendar-check me-2"></i>Fecha de vencimiento</a></li>
+                        <li><a class="dropdown-item" href="#"><i class="bi bi-flag me-2"></i>Prioridad</a></li>
+                        <li><a class="dropdown-item" href="#"><i class="bi bi-check-circle me-2"></i>Estado</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div id="cardView" class="view-container">
+            <div class="row">
+                @foreach (var task in Model.Tasks)
+                {
+                    <div class="col-md-6 col-lg-4 mb-4 task-item" data-task-id="@task.Id">
+                        @await Html.PartialAsync("_TaskCard", task)
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div id="listView" class="view-container">
+            <div class="card mb-4">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Descripción</th>
+                                <th>Estado</th>
+                                <th>Prioridad</th>
+                                <th>Vencimiento</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var task in Model.Tasks)
+                            {
+                                <tr class="@(task.IsOverdue ? "table-danger" : "")" data-task-id="@task.Id">
+                                    <td>
+                                        <div class="fw-bold">@task.Description</div>
+                                        @if (!string.IsNullOrEmpty(task.Category))
+                                        {
+                                            <span class="badge bg-info">@task.Category</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <span class="badge @(task.Status switch {
+                                            TodoTaskStatus.Pending => "bg-warning text-dark",
+                                            TodoTaskStatus.InProgress => "bg-primary",
+                                            TodoTaskStatus.Completed => "bg-success",
+                                            _ => "bg-secondary"
+                                        })">@task.Status</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge @(task.Priority switch {
+                                            Priority.Low => "bg-success",
+                                            Priority.Medium => "bg-warning text-dark",
+                                            Priority.High => "bg-danger",
+                                            Priority.Urgent => "bg-danger",
+                                            _ => "bg-secondary"
+                                        })">@task.Priority</span>
+                                    </td>
+                                    <td>
+                                        @if (task.DueDate.HasValue)
+                                        {
+                                            <span class="@(task.IsOverdue ? "text-danger" : "")">
+                                                @task.DueDate.Value.ToLocalTime().ToString("d")
+                                                @if (task.IsOverdue)
+                                                {
+                                                    <i class="bi bi-exclamation-triangle-fill ms-1" 
+                                                       data-bs-toggle="tooltip" title="¡Tarea vencida!"></i>
+                                                }
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">-</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            @if (task.Status != TodoTaskStatus.Completed)
+                                            {
+                                                <button type="button" class="btn btn-success quick-status-change" 
+                                                        data-task-id="@task.Id" data-status="@((int)TodoTaskStatus.Completed)"
+                                                        data-bs-toggle="tooltip" title="Marcar como completada">
+                                                    <i class="bi bi-check-lg"></i>
+                                                </button>
+                                            }
+                                            @if (task.Status == TodoTaskStatus.Pending)
+                                            {
+                                                <button type="button" class="btn btn-primary quick-status-change" 
+                                                        data-task-id="@task.Id" data-status="@((int)TodoTaskStatus.InProgress)"
+                                                        data-bs-toggle="tooltip" title="Iniciar tarea">
+                                                    <i class="bi bi-play-fill"></i>
+                                                </button>
+                                            }
+                                            <a href="@Url.Action("Edit", "Tasks", new { id = task.Id })" class="btn btn-secondary"
+                                               data-bs-toggle="tooltip" title="Editar tarea">
+                                                <i class="bi bi-pencil-square"></i>
+                                            </a>
+                                            <a href="@Url.Action("Delete", "Tasks", new { id = task.Id })" class="btn btn-danger"
+                                               data-bs-toggle="tooltip" title="Eliminar tarea">
+                                                <i class="bi bi-trash"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <div id="kanbanView" class="view-container active">
+            <div class="row">
+                <!-- Columna de tareas pendientes -->
+                <div class="col-md-4 mb-4">
+                    <div class="task-column task-column-pending" data-status="0">
+                        <div class="task-column-header">
+                            <h3><i class="bi bi-hourglass me-2"></i>Pendientes</h3>
+                            <span class="badge bg-warning text-dark ms-auto task-counter-pending">
+                                @Model.Tasks.Count(t => t.Status == TodoTaskStatus.Pending)
+                            </span>
+                        </div>
+                        <div class="task-column-body">
+                            @foreach (var task in Model.Tasks.Where(t => t.Status == TodoTaskStatus.Pending))
+                            {
+                                <div class="task-item" data-task-id="@task.Id">
+                                    @await Html.PartialAsync("_TaskCard", task)
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Columna de tareas en progreso -->
+                <div class="col-md-4 mb-4">
+                    <div class="task-column task-column-in-progress" data-status="1">
+                        <div class="task-column-header">
+                            <h3><i class="bi bi-play-circle me-2"></i>En Progreso</h3>
+                            <span class="badge bg-primary ms-auto task-counter-in-progress">
+                                @Model.Tasks.Count(t => t.Status == TodoTaskStatus.InProgress)
+                            </span>
+                        </div>
+                        <div class="task-column-body">
+                            @foreach (var task in Model.Tasks.Where(t => t.Status == TodoTaskStatus.InProgress))
+                            {
+                                <div class="task-item" data-task-id="@task.Id">
+                                    @await Html.PartialAsync("_TaskCard", task)
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Columna de tareas completadas -->
+                <div class="col-md-4 mb-4">
+                    <div class="task-column task-column-completed" data-status="2">
+                        <div class="task-column-header">
+                            <h3><i class="bi bi-check-circle me-2"></i>Completadas</h3>
+                            <span class="badge bg-success ms-auto task-counter-completed">
+                                @Model.Tasks.Count(t => t.Status == TodoTaskStatus.Completed)
+                            </span>
+                        </div>
+                        <div class="task-column-body">
+                            @foreach (var task in Model.Tasks.Where(t => t.Status == TodoTaskStatus.Completed))
+                            {
+                                <div class="task-item" data-task-id="@task.Id">
+                                    @await Html.PartialAsync("_TaskCard", task)
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+            @await Html.PartialAsync("_Pagination", Model.Pagination)
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <!-- Incluir el script de carga de tareas -->
+    <script src="~/js/taskLoader.js"></script>
+    
+    <script>
+        // Cambiar entre vistas de tareas
+        document.addEventListener('DOMContentLoaded', function() {
+            const cardViewBtn = document.getElementById('cardViewBtn');
+            const listViewBtn = document.getElementById('listViewBtn');
+            const kanbanViewBtn = document.getElementById('kanbanViewBtn');
+            const cardView = document.getElementById('cardView');
+            const listView = document.getElementById('listView');
+            const kanbanView = document.getElementById('kanbanView');
+            
+            console.log('Elementos de vista:', {
+                cardViewBtn: cardViewBtn ? 'encontrado' : 'no encontrado',
+                listViewBtn: listViewBtn ? 'encontrado' : 'no encontrado',
+                kanbanViewBtn: kanbanViewBtn ? 'encontrado' : 'no encontrado',
+                cardView: cardView ? 'encontrado' : 'no encontrado',
+                listView: listView ? 'encontrado' : 'no encontrado',
+                kanbanView: kanbanView ? 'encontrado' : 'no encontrado'
+            });
+            
+            if (cardViewBtn && listViewBtn && kanbanViewBtn && cardView && listView && kanbanView) {
+                // Función para cambiar entre vistas
+                function switchView(viewType) {
+                    console.log('Cambiando a vista:', viewType);
+                    
+                    // Ocultar todas las vistas quitando la clase active
+                    document.querySelectorAll('.view-container').forEach(view => {
+                        view.classList.remove('active');
+                    });
+                    
+                    // Desactivar todos los botones
+                    cardViewBtn.classList.remove('active');
+                    listViewBtn.classList.remove('active');
+                    kanbanViewBtn.classList.remove('active');
+                    
+                    // Mostrar la vista seleccionada
+                    if (viewType === 'card') {
+                        cardView.classList.add('active');
+                        cardViewBtn.classList.add('active');
+                        console.log('Vista de tarjetas activada');
+                    } else if (viewType === 'list') {
+                        listView.classList.add('active');
+                        listViewBtn.classList.add('active');
+                        console.log('Vista de lista activada');
+                    } else if (viewType === 'kanban') {
+                        kanbanView.classList.add('active');
+                        kanbanViewBtn.classList.add('active');
+                        console.log('Vista kanban activada');
+                    }
+                    
+                    // Guardar preferencia
+                    localStorage.setItem('taskViewPreference', viewType);
+                    console.log('Preferencia guardada:', viewType);
+                }
+                
+                // Configurar event listeners
+                cardViewBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    console.log('Botón de vista de tarjetas clickeado');
+                    switchView('card');
+                });
+                
+                listViewBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    console.log('Botón de vista de lista clickeado');
+                    switchView('list');
+                });
+                
+                kanbanViewBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    console.log('Botón de vista kanban clickeado');
+                    switchView('kanban');
+                });
+                
+                // Cargar preferencia guardada o usar kanban por defecto
+                const savedView = localStorage.getItem('taskViewPreference') || 'kanban';
+                console.log('Cargando preferencia guardada:', savedView);
+                switchView(savedView);
+            } else {
+                console.error('No se encontraron todos los elementos necesarios para el cambio de vista');
+            }
+            
+            // Iniciar la carga de tareas si es necesario
+            if (@Json.Serialize(loadTasksAsync)) {
+                console.log('Iniciando carga asíncrona desde Index.cshtml');
+                // Esperar a que el DOM esté completamente cargado
+                setTimeout(() => {
+                    console.log('Ejecutando loadTasksAsynchronously con retraso para asegurar carga completa');
+                    loadTasksAsynchronously();
+                }, 500);
+            }
+            
+            // Configurar funcionalidades adicionales
+            setupTaskCardClasses();
+            setupDragAndDrop();
+            setupTaskStatusChanges();
+        });
+        
+        // Función para configurar clases de tarjetas de tareas
+        function setupTaskCardClasses() {
+            document.querySelectorAll('.task-card').forEach(function(card) {
+                const statusBadge = card.querySelector('.badge[data-bs-toggle="tooltip"][title="Estado"]');
+                if (statusBadge) {
+                    const statusText = statusBadge.textContent.trim();
+                    
+                    if (statusText.includes('Pendiente')) {
+                        card.classList.add('status-pending');
+                    } else if (statusText.includes('En Progreso')) {
+                        card.classList.add('status-in-progress');
+                    } else if (statusText.includes('Completada')) {
+                        card.classList.add('status-completed');
+                    }
+                }
+            });
+        }
+        
+        // Función para configurar drag & drop
+        function setupDragAndDrop() {
+            // Verificar si estamos en la vista de kanban
+            const kanbanView = document.getElementById('kanbanView');
+            if (!kanbanView || !kanbanView.classList.contains('active')) return;
+            
+            const taskItems = document.querySelectorAll('.task-item');
+            const dropZones = document.querySelectorAll('.task-column');
+            
+            let draggedItem = null;
+            
+            // Configurar eventos para elementos arrastrables
+            taskItems.forEach(item => {
+                item.setAttribute('draggable', 'true');
+                
+                item.addEventListener('dragstart', function(e) {
+                    console.log('Iniciando arrastre de tarea:', this.getAttribute('data-task-id'));
+                    draggedItem = this;
+                    setTimeout(() => {
+                        this.classList.add('dragging');
+                    }, 0);
+                    
+                    // Almacenar el ID de la tarea en el dataTransfer
+                    e.dataTransfer.setData('text/plain', this.getAttribute('data-task-id'));
+                    e.dataTransfer.effectAllowed = 'move';
+                });
+                
+                item.addEventListener('dragend', function() {
+                    console.log('Finalizando arrastre');
+                    this.classList.remove('dragging');
+                    draggedItem = null;
+                    
+                    // Eliminar la clase drag-over de todas las zonas de destino
+                    dropZones.forEach(zone => {
+                        zone.classList.remove('drag-over');
+                    });
+                });
+            });
+            
+            // Configurar eventos para zonas de destino
+            dropZones.forEach(zone => {
+                zone.addEventListener('dragover', function(e) {
+                    e.preventDefault();
+                    this.classList.add('drag-over');
+                });
+                
+                zone.addEventListener('dragleave', function() {
+                    this.classList.remove('drag-over');
+                });
+                
+                zone.addEventListener('drop', function(e) {
+                    e.preventDefault();
+                    this.classList.remove('drag-over');
+                    
+                    if (draggedItem) {
+                        const taskId = e.dataTransfer.getData('text/plain');
+                        const newStatus = this.getAttribute('data-status');
+                        
+                        console.log('Tarea soltada:', taskId, 'Nuevo estado:', newStatus);
+                        
+                        if (taskId && newStatus) {
+                            // Actualizar el estado de la tarea mediante AJAX
+                            updateTaskStatus(taskId, newStatus);
+                        }
+                    }
+                });
+            });
+        }
+        
+        // Función para configurar cambios rápidos de estado
+        function setupTaskStatusChanges() {
+            document.querySelectorAll('.quick-status-change').forEach(button => {
+                button.addEventListener('click', function() {
+                    const taskId = this.getAttribute('data-task-id');
+                    const newStatus = this.getAttribute('data-status');
+                    
+                    console.log('Cambio rápido de estado:', taskId, 'Nuevo estado:', newStatus);
+                    
+                    if (taskId && newStatus) {
+                        updateTaskStatus(taskId, newStatus);
+                    }
+                });
+            });
+        }
+        
+        // Función para actualizar el estado de una tarea mediante AJAX
+        function updateTaskStatus(taskId, newStatus) {
+            // Obtener el token anti-falsificación
+            const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+            if (!token) {
+                console.error('No se pudo encontrar el token anti-falsificación');
+                showNotification('Error: No se pudo encontrar el token de seguridad', 'danger');
+                return;
+            }
+            
+            // Crear form data - Solo enviamos el ID y el nuevo estado
+            // Esto evita problemas con la validación de otros campos
+            const formData = new FormData();
+            formData.append('id', taskId);
+            formData.append('newStatus', newStatus);
+            formData.append('__RequestVerificationToken', token);
+            
+            console.log(`Enviando solicitud para actualizar tarea ${taskId} a estado ${newStatus}`);
+            
+            // Mostrar indicador de carga global
+            const loadingIndicator = document.createElement('div');
+            loadingIndicator.className = 'loading-indicator position-fixed';
+            loadingIndicator.style.top = '50%';
+            loadingIndicator.style.left = '50%';
+            loadingIndicator.style.transform = 'translate(-50%, -50%)';
+            loadingIndicator.style.zIndex = '9999';
+            loadingIndicator.style.backgroundColor = 'rgba(255, 255, 255, 0.7)';
+            loadingIndicator.style.padding = '20px';
+            loadingIndicator.style.borderRadius = '10px';
+            loadingIndicator.innerHTML = '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Cargando...</span></div>';
+            document.body.appendChild(loadingIndicator);
+            
+            // Enviar solicitud AJAX
+            fetch('/Tasks/UpdateStatus', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                // Agregar un timeout más largo para operaciones que pueden tardar
+                signal: AbortSignal.timeout(10000) // 10 segundos
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Error en la respuesta del servidor: ' + response.status);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    // Mostrar notificación de éxito
+                    showNotification(`Tarea actualizada a "${getStatusName(newStatus)}"`, 'success');
+                    
+                    // Eliminar todas las instancias de la tarea de todas las columnas
+                    document.querySelectorAll(`.task-item[data-task-id="${taskId}"]`).forEach(item => {
+                        if (item && item.parentNode) {
+                            item.parentNode.removeChild(item);
+                        }
+                    });
+                    
+                    // Obtener la columna de destino
+                    const targetColumn = document.querySelector(`.task-column[data-status="${newStatus}"] .task-column-body`);
+                    if (targetColumn) {
+                        // Obtener la vista parcial actualizada de la tarea
+                        fetch(`/Tasks/GetTaskPartial?id=${taskId}`)
+                            .then(response => {
+                                if (!response.ok) {
+                                    throw new Error('Error al obtener la vista parcial');
+                                }
+                                return response.text();
+                            })
+                            .then(html => {
+                                // Crear un contenedor temporal para la tarea
+                                const tempContainer = document.createElement('div');
+                                tempContainer.className = 'task-item';
+                                tempContainer.setAttribute('data-task-id', taskId);
+                                tempContainer.innerHTML = html;
+                                
+                                // Añadir la tarea a la columna de destino
+                                targetColumn.appendChild(tempContainer);
+                                
+                                // Configurar eventos para la nueva tarea
+                                setupDragAndDrop();
+                                setupTaskStatusChanges();
+                                setupTaskCardClasses();
+                                
+                                // Actualizar los contadores
+                                updateTaskCounters();
+                                
+                                // Añadir animación de entrada
+                                setTimeout(() => {
+                                    tempContainer.classList.add('task-item-animated');
+                                    setTimeout(() => {
+                                        tempContainer.classList.remove('task-item-animated');
+                                    }, 500);
+                                }, 10);
+                                
+                                // Ocultar indicador de carga
+                                if (loadingIndicator && loadingIndicator.parentNode) {
+                                    loadingIndicator.parentNode.removeChild(loadingIndicator);
+                                }
+                            })
+                            .catch(error => {
+                                console.error('Error al obtener la vista parcial:', error);
+                                // En caso de error, recargar la página
+                                location.reload();
+                            });
+                    } else {
+                        // Si no se encuentra la columna de destino, recargar la página
+                        if (loadingIndicator && loadingIndicator.parentNode) {
+                            loadingIndicator.parentNode.removeChild(loadingIndicator);
+                        }
+                        location.reload();
+                    }
+                } else {
+                    // Ocultar indicador de carga
+                    if (loadingIndicator && loadingIndicator.parentNode) {
+                        loadingIndicator.parentNode.removeChild(loadingIndicator);
+                    }
+                    showNotification('Error al actualizar el estado: ' + (data.message || 'Error desconocido'), 'danger');
+                }
+            })
+            .catch(error => {
+                // Ocultar indicador de carga
+                if (loadingIndicator && loadingIndicator.parentNode) {
+                    loadingIndicator.parentNode.removeChild(loadingIndicator);
+                }
+                
+                showNotification('Error al actualizar el estado de la tarea: ' + error.message, 'danger');
+                console.error('Error:', error);
+                
+                // Recargar la página en caso de error
+                setTimeout(() => location.reload(), 2000);
+            });
+        }
+        
+        // Esta función ya no es necesaria ya que recargamos la página
+        // function moveTaskToColumn(taskItem, taskItemClone, newStatus) {
+        //     // Código eliminado ya que ahora recargamos la página
+        // }
+        
+        // Función para actualizar los contadores de tareas
+        function updateTaskCounters() {
+            const pendingCount = document.querySelectorAll('.task-column-pending .task-item').length;
+            const inProgressCount = document.querySelectorAll('.task-column-in-progress .task-item').length;
+            const completedCount = document.querySelectorAll('.task-column-completed .task-item').length;
+            
+            document.querySelector('.task-counter-pending').textContent = pendingCount;
+            document.querySelector('.task-counter-in-progress').textContent = inProgressCount;
+            document.querySelector('.task-counter-completed').textContent = completedCount;
+        }
+        
+        // Función para obtener el nombre del estado a partir del valor numérico
+        function getStatusName(statusValue) {
+            switch (parseInt(statusValue)) {
+                case 0: return "Pendiente";
+                case 1: return "En Progreso";
+                case 2: return "Completada";
+                default: return "Desconocido";
+            }
+        }
+        
+        // Función para mostrar notificaciones
+        function showNotification(message, type) {
+            const notificationsContainer = document.getElementById('notificationsContainer');
+            if (!notificationsContainer) return;
+            
+            const notification = document.createElement('div');
+            notification.className = `alert alert-${type} alert-dismissible fade show`;
+            notification.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+            `;
+            
+            notificationsContainer.appendChild(notification);
+            
+            // Auto-cerrar después de 5 segundos
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => {
+                    notification.remove();
+                }, 150);
+            }, 5000);
+        }
+    </script>
+}

@@ -1,0 +1,27 @@
+# Documentation for launchSettings.json
+
+## Overview
+The `launchSettings.json` file is used to configure how the application is launched. It defines different profiles that specify settings for running the application in various environments, such as development or production.
+
+## Schema
+- `$schema`: Specifies the URL of the JSON schema that defines the structure of the `launchSettings.json` file.
+
+## Profiles
+The `profiles` section contains different configurations for launching the application. Each profile is identified by a unique name.
+
+### Profile: http
+- `commandName`: Specifies the type of command to execute. In this case, "Project" indicates that the project should be run.
+- `dotnetRunMessages`: A boolean value that, when set to true, enables detailed messages from the .NET runtime.
+- `launchBrowser`: A boolean value that determines whether a browser should be launched automatically when the application starts. Set to false in this profile.
+- `applicationUrl`: The URL(s) where the application will be accessible. For the HTTP profile, it is set to "http://localhost:5080".
+- `environmentVariables`: A set of key-value pairs defining environment variables for the application. Here, `ASPNETCORE_ENVIRONMENT` is set to "Development".
+
+### Profile: https
+- `commandName`: Similar to the HTTP profile, it specifies the command type as "Project".
+- `dotnetRunMessages`: Enables detailed .NET runtime messages.
+- `launchBrowser`: Set to false, indicating that the browser will not be launched automatically.
+- `applicationUrl`: The URL(s) for accessing the application. This profile supports both HTTPS and HTTP, with URLs "https://localhost:7095" and "http://localhost:5080".
+- `environmentVariables`: Defines environment variables, with `ASPNETCORE_ENVIRONMENT` set to "Development".
+
+## Usage
+To use a specific profile, configure your development environment to reference the desired profile name. This allows you to switch between different configurations easily, depending on your development or deployment needs.

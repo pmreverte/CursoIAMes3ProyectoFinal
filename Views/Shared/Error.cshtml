@@ -1,0 +1,55 @@
+@model Sprint2.Models.ErrorViewModel
+@{
+    ViewData["Title"] = "Error";
+}
+
+<div class="container py-5">
+    <div class="row">
+        <div class="col-lg-8 mx-auto text-center">
+            <div class="mb-4">
+                <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 5rem;"></i>
+            </div>
+            
+            <h1 class="display-4 mb-3">¡Ups! Algo salió mal</h1>
+            
+            @if (Model.ShowRequestId)
+            {
+                <p class="text-muted mb-4">
+                    <strong>ID de solicitud:</strong> <code>@Model.RequestId</code>
+                </p>
+            }
+            
+            <div class="card shadow-sm mb-4">
+                <div class="card-body py-4">
+                    <h2 class="h4 mb-3">¿Qué puedo hacer ahora?</h2>
+                    <ul class="list-unstyled text-start">
+                        <li class="mb-2">
+                            <i class="bi bi-arrow-clockwise me-2 text-primary"></i>
+                            <a href="javascript:window.location.reload();">Recargar la página</a>
+                        </li>
+                        <li class="mb-2">
+                            <i class="bi bi-house me-2 text-primary"></i>
+                            <a asp-controller="Home" asp-action="Index">Volver a la página de inicio</a>
+                        </li>
+                        <li class="mb-2">
+                            <i class="bi bi-list-check me-2 text-primary"></i>
+                            <a asp-controller="Tasks" asp-action="Index">Ir a mis tareas</a>
+                        </li>
+                        <li>
+                            <i class="bi bi-envelope me-2 text-primary"></i>
+                            <a asp-controller="Home" asp-action="Contact">Contactar con soporte</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            
+            <p class="text-muted">
+                Si el problema persiste, por favor contacta con nuestro equipo de soporte.
+            </p>
+            
+            <a asp-controller="Home" asp-action="Index" class="btn btn-primary btn-lg px-4">
+                <i class="bi bi-house-door me-2"></i>Volver al Inicio
+            </a>
+        </div>
+    </div>
+</div>

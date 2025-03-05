@@ -1,0 +1,45 @@
+<script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
+<script src="~/lib/jquery-validation-unobtrusive/jquery.validate.unobtrusive.min.js"></script>
+
+<script>
+    // Personalización de mensajes de validación en español
+    $.extend($.validator.messages, {
+        required: "Este campo es obligatorio.",
+        remote: "Por favor, corrija este campo.",
+        email: "Por favor, introduzca una dirección de correo válida.",
+        url: "Por favor, introduzca una URL válida.",
+        date: "Por favor, introduzca una fecha válida.",
+        dateISO: "Por favor, introduzca una fecha (ISO) válida.",
+        number: "Por favor, introduzca un número válido.",
+        digits: "Por favor, introduzca sólo dígitos.",
+        creditcard: "Por favor, introduzca un número de tarjeta válido.",
+        equalTo: "Por favor, introduzca el mismo valor de nuevo.",
+        accept: "Por favor, introduzca un valor con una extensión válida.",
+        maxlength: $.validator.format("Por favor, no introduzca más de {0} caracteres."),
+        minlength: $.validator.format("Por favor, introduzca al menos {0} caracteres."),
+        rangelength: $.validator.format("Por favor, introduzca un valor entre {0} y {1} caracteres."),
+        range: $.validator.format("Por favor, introduzca un valor entre {0} y {1}."),
+        max: $.validator.format("Por favor, introduzca un valor menor o igual a {0}."),
+        min: $.validator.format("Por favor, introduzca un valor mayor o igual a {0}.")
+    });
+
+    // Validación personalizada para fechas futuras
+    $.validator.addMethod("futureDate", function(value, element) {
+        if (!value) return true; // Permitir valores vacíos
+        var today = new Date().setHours(0,0,0,0);
+        var inputDate = new Date(value).setHours(0,0,0,0);
+        return inputDate >= today;
+    }, "La fecha debe ser igual o posterior a hoy.");
+
+    // Aplicar validación de fecha futura a elementos con el atributo data-val-futuredate
+    $(document).ready(function() {
+        $("input[data-val-futuredate]").each(function() {
+            $(this).rules("add", {
+                futureDate: true,
+                messages: {
+                    futureDate: $(this).data("val-futuredate")
+                }
+            });
+        });
+    });
+</script>

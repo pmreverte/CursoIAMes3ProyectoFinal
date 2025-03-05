@@ -1,0 +1,125 @@
+@using Sprint2.Models
+@using System.ComponentModel.DataAnnotations
+@model TaskFilter
+
+@functions {
+    // This function retrieves the display name of an enum value using the DisplayAttribute.
+    public string GetDisplayName(Enum enumValue)
+    {
+        var displayAttribute = enumValue.GetType()
+            .GetField(enumValue.ToString())
+            .GetCustomAttributes(typeof(DisplayAttribute), false)
+            .FirstOrDefault() as DisplayAttribute;
+        
+        return displayAttribute?.Name ?? enumValue.ToString();
+    }
+}
+
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">
+            <i class="bi bi-funnel me-2"></i>Filtros
+        </h5>
+        <button class="btn btn-sm btn-link text-decoration-none" type="button" 
+                data-bs-toggle="collapse" data-bs-target="#filterCollapse" 
+                aria-expanded="true" aria-controls="filterCollapse">
+            <i class="bi bi-chevron-down"></i>
+        </button>
+    </div>
+    <div class="collapse show" id="filterCollapse">
+        <div class="card-body">
+            <form method="get" asp-action="Index" id="filterForm">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="SearchTerm" class="form-label">
+                                <i class="bi bi-search me-1"></i>Buscar
+                            </label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="SearchTerm" name="SearchTerm" 
+                                    value="@Model.SearchTerm" placeholder="Buscar en descripción, categoría o notas...">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-search"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="form-group">
+                            <label for="Status" class="form-label">
+                                <i class="bi bi-check-circle me-1"></i>Estado
+                            </label>
+                            <select class="form-select" id="Status" name="Status">
+                                <option value="">Todos</option>
+                                @foreach (TodoTaskStatus status in Enum.GetValues(typeof(TodoTaskStatus)))
+                                {
+                                    <option value="@((int)status)" selected="@(Model.Status == status)">
+                                        @GetDisplayName(status)
+                                    </option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="form-group">
+                            <label for="Priority" class="form-label">
+                                <i class="bi bi-flag me-1"></i>Prioridad
+                            </label>
+                            <select class="form-select" id="Priority" name="Priority">
+                                <option value="">Todas</option>
+                                @foreach (Priority priority in Enum.GetValues(typeof(Priority)))
+                                {
+                                    <option value="@((int)priority)" selected="@(Model.Priority == priority)">
+                                        @GetDisplayName(priority)
+                                    </option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="form-group">
+                            <label for="Category" class="form-label">
+                                <i class="bi bi-tag me-1"></i>Categoría
+                            </label>
+                            <select class="form-select" id="Category" name="Category">
+                                <option value="">Todas</option>
+                                @foreach (var category in ViewBag.Categories)
+                                {
+                                    <option value="@category" selected="@(Model.Category == category)">@category</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="form-group">
+                            <label for="IsOverdue" class="form-label">
+                                <i class="bi bi-calendar-x me-1"></i>Vencimiento
+                            </label>
+                            <select class="form-select" id="IsOverdue" name="IsOverdue">
+                                <option value="">Todos</option>
+                                <option value="true" selected="@(Model.IsOverdue == true)">Vencidas</option>
+                                <option value="false" selected="@(Model.IsOverdue == false)">No vencidas</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col">
+                        <a href="@Url.Action("Index")" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-circle me-1"></i>Limpiar filtros
+                        </a>
+                        <div class="float-end">
+                            <span class="text-muted me-2">
+                                @if (ViewBag.TotalTasks > 0)
+                                {
+                                    <i class="bi bi-info-circle me-1"></i>
+                                    <span>Mostrando @ViewBag.FilteredTasks de @ViewBag.TotalTasks tareas</span>
+                                }
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,255 @@
+@{
+    // Set the layout for the view and define the page title
+    Layout = "_Layout";
+    ViewData["Title"] = "Nueva Tarea";
+}
+@model TodoTask // The model used for this view, representing a task
+@using Sprint2.Models 
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers 
+
+<div class="container"> <!-- Main container for the view content -->
+    <div class="row mb-4"> <!-- Header section with title and description -->
+        <div class="col">
+            <h1 class="display-5 fw-bold">
+                <i class="bi bi-plus-circle me-2"></i>Nueva Tarea
+            </h1>
+            <p class="text-muted">Crea una nueva tarea para organizar tu trabajo</p>
+        </div>
+    </div>
+
+    @await Html.PartialAsync("_Notifications") <!-- Include notifications partial view -->
+
+    <div class="row"> <!-- Main form section for task creation -->
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="card-title mb-0">Información de la Tarea</h5>
+                </div>
+                <div class="card-body">
+                    <form asp-action="Create" method="post" id="createTaskForm"> <!-- Form for creating a new task -->
+                        <div class="mb-4"> <!-- Input for task description -->
+                            <label asp-for="Description" class="form-label">
+                                <i class="bi bi-pencil-square me-1"></i>Descripción
+                            </label>
+                            <input asp-for="Description" class="form-control form-control-lg" 
+                                   placeholder="¿Qué necesitas hacer?" autofocus />
+                            <span asp-validation-for="Description" class="text-danger"></span>
+                        </div>
+
+                        <div class="row mb-4"> <!-- Inputs for task status and priority -->
+                            <div class="col-md-6"> <!-- Status selection -->
+                                <label asp-for="Status" class="form-label">
+                                    <i class="bi bi-check-circle me-1"></i>Estado
+                                </label>
+                                <select asp-for="Status" class="form-select" asp-items="Html.GetEnumSelectList<TodoTaskStatus>()">
+                                </select>
+                                <span asp-validation-for="Status" class="text-danger"></span>
+                                <div class="form-text">Estado actual de la tarea</div>
+                            </div>
+                            <div class="col-md-6"> <!-- Priority selection -->
+                                <label asp-for="Priority" class="form-label">
+                                    <i class="bi bi-flag me-1"></i>Prioridad
+                                </label>
+                                <select asp-for="Priority" class="form-select priority-select" 
+                                        asp-items="Html.GetEnumSelectList<Priority>()">
+                                </select>
+                                <span asp-validation-for="Priority" class="text-danger"></span>
+                                <div class="form-text">Nivel de importancia de la tarea</div>
+                            </div>
+                        </div>
+
+                        <div class="row mb-4"> <!-- Inputs for task category and due date -->
+                            <div class="col-md-6"> <!-- Category input with datalist -->
+                                <label asp-for="Category" class="form-label">
+                                    <i class="bi bi-tag me-1"></i>Categoría
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-tag"></i></span>
+                                    <input asp-for="Category" class="form-control" list="categoryList" 
+                                           placeholder="Selecciona o crea una categoría" />
+                                </div>
+                                <datalist id="categoryList">
+                                    @foreach (var category in ViewBag.Categories)
+                                    {
+                                        <option value="@category"></option>
+                                    }
+                                </datalist>
+                                <span asp-validation-for="Category" class="text-danger"></span>
+                                <div class="form-text">Grupo o tipo de tarea (opcional)</div>
+                            </div>
+                            <div class="col-md-6"> <!-- Due date input -->
+                                <label asp-for="DueDate" class="form-label">
+                                    <i class="bi bi-calendar me-1"></i>Fecha de Vencimiento
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-calendar"></i></span>
+                                    <input asp-for="DueDate" class="form-control" type="date" />
+                                </div>
+                                <span asp-validation-for="DueDate" class="text-danger"></span>
+                                <div class="form-text">Fecha límite para completar la tarea (opcional)</div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4"> <!-- Textarea for additional notes -->
+                            <label asp-for="Notes" class="form-label">
+                                <i class="bi bi-journal-text me-1"></i>Notas
+                            </label>
+                            <textarea asp-for="Notes" class="form-control" rows="4" 
+                                      placeholder="Información adicional sobre la tarea..."></textarea>
+                            <span asp-validation-for="Notes" class="text-danger"></span>
+                            <div class="form-text">
+                                <span id="notesCounter">0</span>/500 caracteres
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between mt-4"> <!-- Form action buttons -->
+                            <a asp-action="Index" class="btn btn-outline-secondary btn-lg">
+                                <i class="bi bi-arrow-left me-1"></i> Volver
+                            </a>
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="bi bi-save me-1"></i> Guardar Tarea
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4"> <!-- Sidebar with help and tips -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-info-circle me-1"></i>Ayuda
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p>Complete los campos para crear una nueva tarea:</p>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex">
+                            <i class="bi bi-pencil-square me-3 text-primary"></i>
+                            <div>
+                                <strong>Descripción</strong>
+                                <p class="mb-0 text-muted small">Breve descripción de la tarea</p>
+                            </div>
+                        </li>
+                        <li class="list-group-item d-flex">
+                            <i class="bi bi-check-circle me-3 text-primary"></i>
+                            <div>
+                                <strong>Estado</strong>
+                                <p class="mb-0 text-muted small">Estado actual de la tarea</p>
+                            </div>
+                        </li>
+                        <li class="list-group-item d-flex">
+                            <i class="bi bi-flag me-3 text-primary"></i>
+                            <div>
+                                <strong>Prioridad</strong>
+                                <p class="mb-0 text-muted small">Nivel de importancia</p>
+                            </div>
+                        </li>
+                        <li class="list-group-item d-flex">
+                            <i class="bi bi-tag me-3 text-primary"></i>
+                            <div>
+                                <strong>Categoría</strong>
+                                <p class="mb-0 text-muted small">Grupo o tipo de tarea (opcional)</p>
+                            </div>
+                        </li>
+                        <li class="list-group-item d-flex">
+                            <i class="bi bi-calendar me-3 text-primary"></i>
+                            <div>
+                                <strong>Fecha de Vencimiento</strong>
+                                <p class="mb-0 text-muted small">Fecha límite (opcional)</p>
+                            </div>
+                        </li>
+                        <li class="list-group-item d-flex">
+                            <i class="bi bi-journal-text me-3 text-primary"></i>
+                            <div>
+                                <strong>Notas</strong>
+                                <p class="mb-0 text-muted small">Información adicional (opcional)</p>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-lightbulb me-1"></i>Consejos
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle-fill me-2"></i>
+                        Las tareas bien definidas son más fáciles de completar. Intenta ser específico en la descripción.
+                    </div>
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        Establece fechas de vencimiento realistas para evitar tareas vencidas.
+                    </div>
+                    <div class="alert alert-success">
+                        <i class="bi bi-check-circle-fill me-2"></i>
+                        Organiza tus tareas por categorías para una mejor gestión.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts { <!-- Client-side scripts for form validation and interaction -->
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script> <!-- JavaScript for client-side validation and UI enhancements -->
+        document.addEventListener('DOMContentLoaded', function() {
+            // Validación del lado del cliente para la fecha de vencimiento
+            const dueDateInput = document.getElementById('DueDate');
+            if (dueDateInput) {
+                const today = new Date().toISOString().split('T')[0];
+                dueDateInput.setAttribute('min', today);
+            }
+            
+            // Contador de caracteres para las notas
+            const notesTextarea = document.getElementById('Notes');
+            const notesCounter = document.getElementById('notesCounter');
+            if (notesTextarea && notesCounter) {
+                notesTextarea.addEventListener('input', function() {
+                    notesCounter.textContent = this.value.length;
+                    
+                    // Cambiar color cuando se acerca al límite
+                    if (this.value.length > 450) {
+                        notesCounter.classList.add('text-danger');
+                    } else {
+                        notesCounter.classList.remove('text-danger');
+                    }
+                });
+                
+                // Inicializar contador
+                notesTextarea.dispatchEvent(new Event('input'));
+            }
+            
+            // Estilizar select de prioridad
+            const prioritySelect = document.querySelector('.priority-select');
+            if (prioritySelect) {
+                prioritySelect.addEventListener('change', function() {
+                    // Remover clases anteriores
+                    this.classList.remove('border-success', 'border-warning', 'border-danger');
+                    
+                    // Añadir clase según valor seleccionado
+                    switch (this.value) {
+                        case '0': // Low
+                            this.classList.add('border-success');
+                            break;
+                        case '1': // Medium
+                            this.classList.add('border-warning');
+                            break;
+                        case '2': // High
+                        case '3': // Urgent
+                            this.classList.add('border-danger');
+                            break;
+                    }
+                });
+                
+                // Inicializar estilo
+                prioritySelect.dispatchEvent(new Event('change'));
+            }
+        });
+    </script>
+}

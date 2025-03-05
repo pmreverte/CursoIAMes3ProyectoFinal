@@ -1,0 +1,79 @@
+<!-- Contenedor para notificaciones dinámicas -->
+<div id="notificationsContainer" class="notifications-container"></div>
+
+<!-- Notificaciones del servidor -->
+@if (TempData["Success"] != null)
+{
+    <div class="notifications-container mb-4">
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <div class="d-flex align-items-center">
+                <i class="bi bi-check-circle-fill me-2 fs-4"></i>
+                <div>@TempData["Success"]</div>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    </div>
+}
+
+@if (TempData["Error"] != null)
+{
+    <div class="notifications-container mb-4">
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <div class="d-flex align-items-center">
+                <i class="bi bi-exclamation-triangle-fill me-2 fs-4"></i>
+                <div>@TempData["Error"]</div>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    </div>
+}
+
+@if (TempData["Info"] != null)
+{
+    <div class="notifications-container mb-4">
+        <div class="alert alert-info alert-dismissible fade show" role="alert">
+            <div class="d-flex align-items-center">
+                <i class="bi bi-info-circle-fill me-2 fs-4"></i>
+                <div>@TempData["Info"]</div>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    </div>
+}
+
+@if (TempData["Warning"] != null)
+{
+    <div class="notifications-container mb-4">
+        <div class="alert alert-warning alert-dismissible fade show" role="alert">
+            <div class="d-flex align-items-center">
+                <i class="bi bi-exclamation-circle-fill me-2 fs-4"></i>
+                <div>@TempData["Warning"]</div>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    </div>
+}
+
+@if (ViewData.ModelState.ErrorCount > 0)
+{
+    <div class="notifications-container mb-4">
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <div class="d-flex align-items-center">
+                <i class="bi bi-exclamation-triangle-fill me-2 fs-4"></i>
+                <div>
+                    <strong>Se encontraron errores en el formulario:</strong>
+                    <ul class="mb-0 mt-2">
+                        @foreach (var modelState in ViewData.ModelState.Values)
+                        {
+                            foreach (var error in modelState.Errors)
+                            {
+                                <li>@error.ErrorMessage</li>
+                            }
+                        }
+                    </ul>
+                </div>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    </div>
+}

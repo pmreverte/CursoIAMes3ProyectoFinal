@@ -1,0 +1,119 @@
+@{
+    ViewData["Title"] = "Contacto";
+}
+
+<div class="container py-5">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <h1 class="display-4 mb-4">Contacta con Nosotros</h1>
+            
+            <div class="row mb-5">
+                <div class="col-md-6 mb-4 mb-md-0">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-body">
+                            <h2 class="h4 mb-3">Información de Contacto</h2>
+                            <ul class="list-unstyled">
+                                <li class="mb-3">
+                                    <i class="bi bi-envelope-fill text-primary me-2"></i>
+                                    <strong>Email:</strong>
+                                    <a href="mailto:info@taskapp.com">info@taskapp.com</a>
+                                </li>
+                                <li class="mb-3">
+                                    <i class="bi bi-telephone-fill text-primary me-2"></i>
+                                    <strong>Teléfono:</strong>
+                                    <a href="tel:+34912345678">+34 912 345 678</a>
+                                </li>
+                                <li class="mb-3">
+                                    <i class="bi bi-geo-alt-fill text-primary me-2"></i>
+                                    <strong>Dirección:</strong>
+                                    <address class="d-inline mb-0">
+                                        Calle Gran Vía 28<br>
+                                        28013 Madrid, España
+                                    </address>
+                                </li>
+                                <li>
+                                    <i class="bi bi-clock-fill text-primary me-2"></i>
+                                    <strong>Horario:</strong>
+                                    <p class="d-inline mb-0">
+                                        Lunes a Viernes: 9:00 - 18:00<br>
+                                        Sábado y Domingo: Cerrado
+                                    </p>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-body">
+                            <h2 class="h4 mb-3">Síguenos</h2>
+                            <ul class="list-unstyled">
+                                <li class="mb-3">
+                                    <i class="bi bi-twitter text-primary me-2"></i>
+                                    <strong>Twitter:</strong>
+                                    <a href="https://twitter.com/taskapp" target="_blank">@@taskapp</a>
+                                </li>
+                                <li class="mb-3">
+                                    <i class="bi bi-facebook text-primary me-2"></i>
+                                    <strong>Facebook:</strong>
+                                    <a href="https://facebook.com/taskapp" target="_blank">TaskApp</a>
+                                </li>
+                                <li class="mb-3">
+                                    <i class="bi bi-instagram text-primary me-2"></i>
+                                    <strong>Instagram:</strong>
+                                    <a href="https://instagram.com/taskapp" target="_blank">@@taskapp</a>
+                                </li>
+                                <li>
+                                    <i class="bi bi-linkedin text-primary me-2"></i>
+                                    <strong>LinkedIn:</strong>
+                                    <a href="https://linkedin.com/company/taskapp" target="_blank">TaskApp</a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h2 class="h4 mb-4">Envíanos un Mensaje</h2>
+                    
+                    <form>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="name" class="form-label">Nombre</label>
+                                <input type="text" class="form-control" id="name" placeholder="Tu nombre" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="email" class="form-label">Email</label>
+                                <input type="email" class="form-control" id="email" placeholder="tu@email.com" required>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="subject" class="form-label">Asunto</label>
+                            <input type="text" class="form-control" id="subject" placeholder="Asunto de tu mensaje" required>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="message" class="form-label">Mensaje</label>
+                            <textarea class="form-control" id="message" rows="5" placeholder="Escribe tu mensaje aquí..." required></textarea>
+                        </div>
+                        
+                        <div class="form-check mb-4">
+                            <input class="form-check-input" type="checkbox" id="privacyCheck" required>
+                            <label class="form-check-label" for="privacyCheck">
+                                He leído y acepto la <a asp-controller="Home" asp-action="Privacy">política de privacidad</a>
+                            </label>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="bi bi-send me-2"></i>Enviar Mensaje
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
